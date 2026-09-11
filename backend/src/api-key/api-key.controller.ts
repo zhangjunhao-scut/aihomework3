@@ -48,13 +48,13 @@ export class ApiKeyController {
   ) {
     const userId = (req.user as any).id;
     const { cipher, iv } = this.crypto.encrypt(dto.apiKey);
-    const row = await this.prisma.apiKey.upsert({
+    await this.prisma.apiKey.upsert({
       where: { userId_provider: { userId, provider } },
       update: { cipher, iv },
       create: { userId, provider, cipher, iv },
     });
-    const plain = this.crypto.decrypt(row.cipher, row.iv);
-    return { provider, saved: true, masked: this.crypto.mask(plain) };
+    // 直接用 dto 内容生成掩码，避免再次解密入内存
+    return { provider, saved: true, masked: this.crypto.mask(dto.apiKey) };
   }
 
   @Delete(':provider')

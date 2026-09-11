@@ -1,0 +1,41 @@
+# 大模型接口调用工具箱 —— 容器编排
+# 一键启动：docker compose up -d
+# 访问地址：http://localhost
+
+services:
+  # ============ 前端（nginx 静态托管 + 反代后端） ============
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: aihomework3-frontend:amd64
+    container_name: aihomework3-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ============ 后端（NestJS + Prisma + SQLite） ============
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: aihomework3-backend:amd64
+    container_name: aihomework3-backend
+    environment:
+      - NODE_ENV=production
+      - PORT=8787
+      - JWT_SECRET=${JWT_SECRET:-please-change-this-jwt-secret-to-strong-random-32chars}
+      - AES_KEY=${AES_KEY:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+      - FRONTEND_ORIGIN=http://localhost
+      - ALLOW_CUSTOM_BASEURL=${ALLOW_CUSTOM_BASEURL:-false}
+    volumes:
+      # SQLite 数据库持久化
+      - backend-data:/app/data
+    expose:
+      - "8787"
+    restart: unless-stopped
+
+volumes:
+  backend-data:

@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AppConfig } from './common/config';
 
@@ -8,6 +9,9 @@ async function bootstrap() {
   const config = app.get(AppConfig);
 
   app.setGlobalPrefix('api');
+
+  // 安全 HTTP 头：防 clickjacking、XSS filter、HSTS、CSP 等
+  app.use(helmet());
 
   app.enableCors({
     origin: config.frontendOrigin,
@@ -26,6 +30,7 @@ async function bootstrap() {
     // 安全：避免把 Authorization / apiKey 打进日志
     const safe = { ...req.body };
     if (safe.apiKey) safe.apiKey = '***';
+    if (safe.messages) safe.messages = '[redacted]';
     new Logger('HTTP').verbose?.(
       `${req.method} ${req.url} body=${JSON.stringify(safe)}`,
     );

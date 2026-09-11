@@ -98,26 +98,40 @@ export class ChatService {
       if (u.protocol !== 'https:') {
         throw new BadRequestException('自定义 BaseURL 必须为 https');
       }
-      const host = u.hostname;
-      if (
-        host === 'localhost' ||
-        host.startsWith('127.') ||
-        host.startsWith('10.') ||
-        host.startsWith('192.168.') ||
-        host.startsWith('169.254.') ||
-        host.startsWith('172.16.') ||
-        host.startsWith('172.17.') ||
-        host.startsWith('172.18.') ||
-        host.startsWith('172.19.') ||
-        host.startsWith('172.2') ||
-        host.startsWith('172.3')
-      ) {
+      const host = u.hostname.toLowerCase();
+      if (this.isPrivateHost(host)) {
         throw new BadRequestException('禁止访问内网地址');
       }
     } catch (e) {
       if (e instanceof BadRequestException) throw e;
       throw new BadRequestException('BaseURL 格式非法');
     }
+  }
+
+  /** 判断是否内网/回环地址（含 IPv4 私网段 + IPv6 本地） */
+  private isPrivateHost(host: string): boolean {
+    if (
+      host === 'localhost' ||
+      host === '::1' ||
+      host.startsWith('127.') ||
+      host.startsWith('10.') ||
+      host.startsWith('192.168.') ||
+      host.startsWith('169.254.') ||
+      host.startsWith('0.')
+    ) {
+      return true;
+    }
+    // 172.16.0.0/12 = 172.16.0.0 ~ 172.31.255.255
+    const m = host.match(/^172\.(\d{1,3})\./);
+    if (m) {
+      const second = Number(m[1]);
+      if (second >= 16 && second <= 31) return true;
+    }
+    // IPv6 内网
+    if (host.startsWith('fc') || host.startsWith('fd') || host.startsWith('fe80')) {
+      return true;
+    }
+    return false;
   }
 
   /** 非流式调用 */
